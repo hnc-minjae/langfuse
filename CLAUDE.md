@@ -215,3 +215,74 @@ sendMessage({ userId: someString, sessionId: someOtherString, projectId: another
 
 ## Development Tips
 - Before trying to build the package, try running the linter once first
+
+## Custom Features (feat/meta-prompt branch)
+
+### Meta Prompt - AI-Assisted Prompt Creation
+
+AI와 대화하며 프롬프트를 자동 생성/개선하는 기능. 프롬프트 목록 페이지에서 "New prompt with AI" 버튼으로 진입합니다.
+
+**진입점**: `/project/[projectId]/prompts` → "New prompt with AI" 버튼 → `/project/[projectId]/prompts/new-with-ai`
+
+**구조**:
+- 좌측 ChatPanel: AI와 대화하며 프롬프트 생성 (스트리밍)
+- 우측 PromptEditorPanel: 생성된 프롬프트를 NewPromptForm에 적용하여 저장
+- 데스크톱: 2-column 레이아웃 / 모바일: Tabs 전환
+
+**핵심 기술**:
+- `fetchLLMCompletion()` (LangChain 기반) + `StreamingTextResponse` 으로 스트리밍 응답
+- 프로젝트의 LLM API Keys (`LlmApiKeys` 모델)를 활용한 모델/프로바이더 선택
+- 플랫폼별 포매팅 규칙: OpenAI (### 블록), Claude (XML 태그), Gemini (System/User 분리), generic
+- AI 응답에서 `## Improved Prompt`, `## Clarifying Questions` 등 섹션 자동 파싱
+
+**파일 구조**:
+```
+web/src/features/meta-prompt/
+├── types.ts                              # 공유 타입 (MetaPromptMessage, TargetPlatform 등)
+├── constants/systemPrompt.ts             # 시스템 프롬프트 + PLATFORM_RULES
+├── utils/parsePromptFromResponse.ts      # AI 응답 섹션 파싱
+├── server/
+│   ├── validation.ts                     # Zod v4 요청 스키마
+│   ├── buildMetaPromptMessages.ts        # 플랫폼별 시스템 프롬프트 주입
+│   └── metaPromptCompletionHandler.ts    # 인증 → LLM 호출 → 스트리밍 응답
+├── context/MetaPromptProvider.tsx        # React Context + 스트리밍 fetch
+└── components/
+    ├── ModelSelector.tsx                 # Provider/Model/TargetPlatform 드롭다운
+    ├── ChatHistory.tsx                   # 채팅 히스토리 (마크다운 렌더링)
+    ├── ChatInput.tsx                     # 채팅 입력 (auto-resize, Enter 전송)
+    ├── ChatPanel.tsx                     # 채팅 패널 조합
+    ├── ApplyToEditorButton.tsx           # "Apply to Editor" 버튼
+    ├── PromptEditorPanel.tsx             # NewPromptForm ref 연결
+    └── MetaPromptPage.tsx                # 메인 페이지 레이아웃
+```
+
+**API 엔드포인트**: `POST /api/metaPromptCompletion` (`web/src/app/api/metaPromptCompletion/route.ts`)
+
+**수정된 기존 파일**:
+- `web/src/pages/project/[projectId]/prompts/[[...folder]].tsx` - "New prompt with AI" 버튼 추가
+- `web/src/features/prompts/components/NewPromptForm/index.tsx` - `forwardRef` + `useImperativeHandle` 추가
+
+**테스트** (28개, 모두 PASS):
+```sh
+pnpm test-sync --testPathPatterns="meta-prompt"
+```
+- `web/src/__tests__/meta-prompt/parsePromptFromResponse.servertest.ts` (8 tests)
+- `web/src/__tests__/meta-prompt/buildMetaPromptMessages.servertest.ts` (9 tests)
+- `web/src/__tests__/meta-prompt/validation.servertest.ts` (11 tests)
+
+## Claude Code Configuration (.claude/)
+
+### Agents (`.claude/agents/`)
+| Agent | 설명 |
+|-------|------|
+| `changelog-writer.md` | 피처 브랜치 완료 후 changelog 작성 |
+| `meta-prompt-dev.md` | Meta Prompt 기능 개발 팀 (backend → frontend → test → build 파이프라인) |
+
+### Skills (`.claude/skills/`)
+| Skill | 설명 |
+|-------|------|
+| `skill-developer` | Claude Code 스킬 생성/관리 메타 스킬 |
+| `add-model-price` | `default-model-prices.json`에 LLM 모델 가격 추가 |
+| `backend-dev-guidelines` | Next.js/tRPC/Express 백엔드 개발 패턴 가이드 |
+
+트리거 규칙: `.claude/skills/skill-rules.json`
