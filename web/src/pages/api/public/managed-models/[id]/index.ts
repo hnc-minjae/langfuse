@@ -77,12 +77,15 @@ export default withMiddlewares({
             (body.capabilities as Prisma.InputJsonValue) ?? undefined,
           baseUrl: body.baseUrl ?? null,
           modelName: body.modelName ?? null,
-          apiToken:
-            body.apiToken !== null && body.apiToken !== undefined
-              ? body.apiToken === ""
-                ? ""
-                : encrypt(body.apiToken)
-              : null,
+          // undefined = keep existing, null = clear, "" = empty, string = encrypt
+          ...(body.apiToken !== undefined && {
+            apiToken:
+              body.apiToken === null
+                ? null
+                : body.apiToken === ""
+                  ? ""
+                  : encrypt(body.apiToken),
+          }),
           timeout: body.timeout ?? null,
         },
       });

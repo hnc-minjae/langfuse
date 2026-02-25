@@ -234,12 +234,15 @@ export const managedModelRouter = createTRPCRouter({
               (input.capabilities as Prisma.InputJsonValue) ?? undefined,
             baseUrl: input.baseUrl ?? null,
             modelName: input.modelName ?? null,
-            apiToken:
-              input.apiToken !== null && input.apiToken !== undefined
-                ? input.apiToken === ""
-                  ? ""
-                  : encrypt(input.apiToken)
-                : null,
+            // undefined = keep existing, null = clear, "" = empty, string = encrypt
+            ...(input.apiToken !== undefined && {
+              apiToken:
+                input.apiToken === null
+                  ? null
+                  : input.apiToken === ""
+                    ? ""
+                    : encrypt(input.apiToken),
+            }),
             timeout: input.timeout ?? null,
           },
         });
