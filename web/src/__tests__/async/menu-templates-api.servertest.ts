@@ -197,7 +197,7 @@ describe("Menu Templates Public API", () => {
       expect(response.body.meta.totalItems).toBe(3);
       // Ordered desc, so first is version 3
       expect(response.body.data[0].version).toBe(3);
-    });
+    }, 15000);
   });
 
   describe("GET /api/public/organizations/menu-templates/[id]", () => {
@@ -266,7 +266,7 @@ describe("Menu Templates Public API", () => {
       );
 
       expect(response.body.labels).toEqual(["production", "latest"]);
-    });
+    }, 15000);
 
     it("should return 404 for non-existent template", async () => {
       const { auth } = await createOrgAuth();

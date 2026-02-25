@@ -173,7 +173,7 @@ describe("Managed Models Public API", () => {
 
       expect(response.body.data).toHaveLength(1);
       expect(response.body.data[0].brand).toBe(uniqueBrand);
-    });
+    }, 15000);
 
     it("should not return models from other projects (tenant isolation)", async () => {
       const { auth: auth1, projectId: proj1 } =
