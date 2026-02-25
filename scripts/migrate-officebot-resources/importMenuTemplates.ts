@@ -56,7 +56,9 @@ export async function importMenuTemplates(params: {
 
     // Find which orgs should get this template
     for (const mapping of orgMappings) {
+      const isWildcard = mapping.products.includes("*");
       if (
+        !isWildcard &&
         !mapping.products.includes(parsed.product) &&
         !parsed.product.startsWith("_")
       ) {

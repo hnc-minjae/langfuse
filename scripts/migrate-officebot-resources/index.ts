@@ -37,23 +37,8 @@ async function main() {
       ? [{ orgId: orgIdArg, products: ["*"] }]
       : ORG_MAPPINGS;
 
-    // For wildcard orgs, match all products
-    const effectiveMappings = mappings.map((m) => ({
-      ...m,
-      products: m.products.includes("*")
-        ? [
-            "assistanthwp",
-            "assistantpptx",
-            "assistantcell",
-            "assistantpdf",
-            "assistantmail",
-            "assistanthanshow",
-            "assistantcommon",
-            "_translation",
-            "_sampleprompts",
-          ]
-        : m.products,
-    }));
+    // For wildcard orgs, keep "*" so import functions accept any product
+    const effectiveMappings = mappings;
 
     console.log(`\nSource: ${sourcePath}`);
     console.log(`Dry run: ${dryRun}`);
