@@ -1,17 +1,6 @@
 import { prisma } from "@langfuse/shared/src/db";
-import { LLMApiKeySchema } from "@langfuse/shared";
 import { LLMAdapter, type ModelParams } from "@langfuse/shared/src/server";
 import type { ModelOptions } from "../types";
-
-const BRAND_TO_ADAPTER: Record<string, LLMAdapter> = {
-  openai: LLMAdapter.OpenAI,
-  anthropic: LLMAdapter.Anthropic,
-  google: LLMAdapter.GoogleAIStudio,
-  "google-ai-studio": LLMAdapter.GoogleAIStudio,
-  "google-vertex-ai": LLMAdapter.VertexAI,
-  azure: LLMAdapter.Azure,
-  bedrock: LLMAdapter.Bedrock,
-};
 
 interface ResolvedModelConnection {
   modelParams: ModelParams;
@@ -21,8 +10,21 @@ interface ResolvedModelConnection {
     baseURL?: string | null;
     config?: Record<string, string> | null;
   };
+  timeout?: number | null;
 }
 
+/**
+ * Resolves a ManagedModel's own connection fields (baseUrl, modelName, apiToken)
+ * into the format expected by fetchLLMCompletion.
+ *
+ * Unlike the previous approach that looked up LlmApiKeys by brand,
+ * this now reads connection info directly from the ManagedModel itself.
+ *
+ * - adapter: defaults to OpenAI (litellm unification planned)
+ * - secretKey: ManagedModel.apiToken (already stored encrypted)
+ * - baseURL: ManagedModel.baseUrl
+ * - model: ManagedModel.modelName (actual API model name), falls back to modelId
+ */
 export async function resolveModelConnection(params: {
   managedModelId: string;
   projectId: string;
@@ -30,7 +32,7 @@ export async function resolveModelConnection(params: {
 }): Promise<ResolvedModelConnection> {
   const { managedModelId, projectId, modelOptions } = params;
 
-  // 1. Find the ManagedModel
+  // 1. Find the ManagedModel by modelId within the project
   const managedModel = await prisma.managedModel.findFirst({
     where: { projectId, modelId: managedModelId },
   });
@@ -41,66 +43,13 @@ export async function resolveModelConnection(params: {
     );
   }
 
-  // 2. Determine adapter from capabilities or brand
-  const capabilities = managedModel.capabilities as Record<
-    string,
-    unknown
-  > | null;
-  let adapter: LLMAdapter;
-
-  if (
-    capabilities?.preferredAdapter &&
-    typeof capabilities.preferredAdapter === "string"
-  ) {
-    const preferredAdapter = capabilities.preferredAdapter as string;
-    if (Object.values(LLMAdapter).includes(preferredAdapter as LLMAdapter)) {
-      adapter = preferredAdapter as LLMAdapter;
-    } else {
-      throw new Error(
-        `Unknown preferred adapter "${preferredAdapter}" in managed model capabilities`,
-      );
-    }
-  } else {
-    const brand = managedModel.brand.toLowerCase();
-    adapter = BRAND_TO_ADAPTER[brand] ?? LLMAdapter.OpenAI;
-  }
-
-  // 3. Find matching LLM API key
-  // Map adapter back to provider name for lookup
-  const providerName = adapter === LLMAdapter.OpenAI ? "openai" : adapter;
-
-  const llmApiKey = await prisma.llmApiKeys.findFirst({
-    where: {
-      projectId,
-      OR: [
-        { provider: managedModel.brand },
-        { provider: managedModel.brand.toLowerCase() },
-        { adapter: adapter },
-        { provider: providerName },
-      ],
-    },
-  });
-
-  if (!llmApiKey) {
-    throw new Error(
-      `No LLM API key found for provider "${managedModel.brand}" in project "${projectId}". ` +
-        `Please configure an API key for this provider.`,
-    );
-  }
-
-  // 4. Parse and validate the API key
-  const parsedKey = LLMApiKeySchema.safeParse(llmApiKey);
-  if (!parsedKey.success) {
-    throw new Error(
-      `Invalid LLM API key configuration: ${parsedKey.error.message}`,
-    );
-  }
-
-  // 5. Build ModelParams
+  // 2. Build ModelParams
+  // Use OpenAI adapter as default — most custom/self-hosted endpoints
+  // expose OpenAI-compatible APIs. Will be replaced by litellm later.
   const modelParams: ModelParams = {
-    provider: parsedKey.data.provider,
-    adapter: parsedKey.data.adapter,
-    model: managedModel.modelId,
+    provider: managedModel.brand,
+    adapter: LLMAdapter.OpenAI,
+    model: managedModel.modelName ?? managedModel.modelId,
     ...(modelOptions?.temperature !== undefined && {
       temperature: modelOptions.temperature,
     }),
@@ -113,13 +62,18 @@ export async function resolveModelConnection(params: {
     }),
   };
 
-  // 6. Build LLM connection info
+  // 3. Build LLM connection info
+  // apiToken is stored encrypted in DB — fetchLLMCompletion calls decrypt() internally
   const llmConnection = {
-    secretKey: parsedKey.data.secretKey,
-    extraHeaders: parsedKey.data.extraHeaders,
-    baseURL: parsedKey.data.baseURL,
-    config: parsedKey.data.config as Record<string, string> | null,
+    secretKey: managedModel.apiToken ?? "",
+    extraHeaders: null,
+    baseURL: managedModel.baseUrl ?? null,
+    config: null,
   };
 
-  return { modelParams, llmConnection };
+  return {
+    modelParams,
+    llmConnection,
+    timeout: managedModel.timeout,
+  };
 }

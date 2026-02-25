@@ -11,6 +11,10 @@ export const ManagedModelInput = z.object({
   isSupported: z.boolean(),
   sortOrder: z.number().int(),
   capabilities: z.record(z.string(), z.unknown()).nullish(),
+  baseUrl: z.string().nullish(),
+  modelName: z.string().nullish(),
+  apiToken: z.string().nullish(),
+  timeout: z.number().int().positive().nullish(),
 });
 
 export const CreateManagedModelInput = ManagedModelInput.extend({

@@ -19,6 +19,10 @@ const APIManagedModel = z.object({
   isSupported: z.boolean(),
   sortOrder: z.number().int(),
   capabilities: z.any().nullable(),
+  baseUrl: z.string().nullable(),
+  modelName: z.string().nullable(),
+  displayApiToken: z.string().nullable(),
+  timeout: z.number().int().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
@@ -52,6 +56,10 @@ export const PostManagedModelBody = z
     isSupported: z.boolean(),
     sortOrder: z.number().int(),
     capabilities: z.record(z.string(), z.unknown()).nullish(),
+    baseUrl: z.string().nullish(),
+    modelName: z.string().nullish(),
+    apiToken: z.string().nullish(),
+    timeout: z.number().int().positive().nullish(),
   })
   .strict();
 
@@ -103,6 +111,10 @@ export const PostBulkManagedModelsBody = z
         isSupported: z.boolean(),
         sortOrder: z.number().int(),
         capabilities: z.record(z.string(), z.unknown()).nullish(),
+        baseUrl: z.string().nullish(),
+        modelName: z.string().nullish(),
+        apiToken: z.string().nullish(),
+        timeout: z.number().int().positive().nullish(),
       }),
     ),
   })

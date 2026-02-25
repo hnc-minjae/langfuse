@@ -8,6 +8,7 @@ import { throwIfNoProjectAccess } from "@/src/features/rbac/utils/checkProjectAc
 import { TRPCError } from "@trpc/server";
 import { auditLog } from "@/src/features/audit-logs/auditLog";
 import { logger } from "@langfuse/shared/src/server";
+import { encrypt } from "@langfuse/shared/encryption";
 import {
   CreateManagedModelInput,
   UpdateManagedModelInput,
@@ -15,6 +16,7 @@ import {
   GetAllManagedModelsInput,
   BulkUpsertManagedModelsInput,
 } from "../validation";
+import { toApiManagedModel } from "../utils";
 
 export const managedModelRouter = createTRPCRouter({
   getAll: protectedProjectProcedure
@@ -66,7 +68,7 @@ export const managedModelRouter = createTRPCRouter({
           ctx.prisma.managedModel.count({ where }),
         ]);
 
-        return { models, totalCount };
+        return { models: models.map(toApiManagedModel), totalCount };
       } catch (error) {
         logger.error("Failed to get managed models", error);
         if (error instanceof TRPCError) throw error;
@@ -98,7 +100,7 @@ export const managedModelRouter = createTRPCRouter({
           });
         }
 
-        return model;
+        return toApiManagedModel(model);
       } catch (error) {
         logger.error("Failed to get managed model", error);
         if (error instanceof TRPCError) throw error;
@@ -149,6 +151,15 @@ export const managedModelRouter = createTRPCRouter({
             sortOrder: input.sortOrder,
             capabilities:
               (input.capabilities as Prisma.InputJsonValue) ?? undefined,
+            baseUrl: input.baseUrl ?? null,
+            modelName: input.modelName ?? null,
+            apiToken:
+              input.apiToken !== null && input.apiToken !== undefined
+                ? input.apiToken === ""
+                  ? ""
+                  : encrypt(input.apiToken)
+                : null,
+            timeout: input.timeout ?? null,
           },
         });
 
@@ -160,7 +171,7 @@ export const managedModelRouter = createTRPCRouter({
           after: model,
         });
 
-        return model;
+        return toApiManagedModel(model);
       } catch (error) {
         logger.error("Failed to create managed model", error);
         if (error instanceof TRPCError) throw error;
@@ -221,6 +232,18 @@ export const managedModelRouter = createTRPCRouter({
             sortOrder: input.sortOrder,
             capabilities:
               (input.capabilities as Prisma.InputJsonValue) ?? undefined,
+            baseUrl: input.baseUrl ?? null,
+            modelName: input.modelName ?? null,
+            // undefined = keep existing, null = clear, "" = empty, string = encrypt
+            ...(input.apiToken !== undefined && {
+              apiToken:
+                input.apiToken === null
+                  ? null
+                  : input.apiToken === ""
+                    ? ""
+                    : encrypt(input.apiToken),
+            }),
+            timeout: input.timeout ?? null,
           },
         });
 
@@ -233,7 +256,7 @@ export const managedModelRouter = createTRPCRouter({
           after: updated,
         });
 
-        return updated;
+        return toApiManagedModel(updated);
       } catch (error) {
         logger.error("Failed to update managed model", error);
         if (error instanceof TRPCError) throw error;
@@ -299,8 +322,15 @@ export const managedModelRouter = createTRPCRouter({
         });
 
         const results = await ctx.prisma.$transaction(
-          input.models.map((model) =>
-            ctx.prisma.managedModel.upsert({
+          input.models.map((model) => {
+            const encryptedApiToken =
+              model.apiToken !== null && model.apiToken !== undefined
+                ? model.apiToken === ""
+                  ? ""
+                  : encrypt(model.apiToken)
+                : null;
+
+            return ctx.prisma.managedModel.upsert({
               where: {
                 projectId_modelId: {
                   projectId: input.projectId,
@@ -320,6 +350,10 @@ export const managedModelRouter = createTRPCRouter({
                 sortOrder: model.sortOrder,
                 capabilities:
                   (model.capabilities as Prisma.InputJsonValue) ?? undefined,
+                baseUrl: model.baseUrl ?? null,
+                modelName: model.modelName ?? null,
+                apiToken: encryptedApiToken,
+                timeout: model.timeout ?? null,
               },
               update: {
                 displayName: model.displayName,
@@ -332,9 +366,13 @@ export const managedModelRouter = createTRPCRouter({
                 sortOrder: model.sortOrder,
                 capabilities:
                   (model.capabilities as Prisma.InputJsonValue) ?? undefined,
+                baseUrl: model.baseUrl ?? null,
+                modelName: model.modelName ?? null,
+                apiToken: encryptedApiToken,
+                timeout: model.timeout ?? null,
               },
-            }),
-          ),
+            });
+          }),
         );
 
         await auditLog({
