@@ -685,6 +685,10 @@ export type ManagedModel = {
   is_supported: Generated<boolean>;
   sort_order: Generated<number>;
   capabilities: unknown | null;
+  base_url: string | null;
+  model_name: string | null;
+  api_token: string | null;
+  timeout: number | null;
 };
 export type Media = {
   id: string;

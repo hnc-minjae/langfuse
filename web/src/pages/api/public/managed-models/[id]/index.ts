@@ -12,6 +12,8 @@ import {
   DeleteManagedModelResponse,
 } from "@/src/features/public-api/types/managed-models";
 import { InvalidRequestError, LangfuseNotFoundError } from "@langfuse/shared";
+import { encrypt } from "@langfuse/shared/encryption";
+import { toApiManagedModel } from "@/src/features/managed-models/utils";
 
 export default withMiddlewares({
   GET: createAuthedProjectAPIRoute({
@@ -27,7 +29,7 @@ export default withMiddlewares({
         throw new LangfuseNotFoundError("Managed model not found");
       }
 
-      return model;
+      return toApiManagedModel(model);
     },
   }),
 
@@ -73,10 +75,19 @@ export default withMiddlewares({
           sortOrder: body.sortOrder,
           capabilities:
             (body.capabilities as Prisma.InputJsonValue) ?? undefined,
+          baseUrl: body.baseUrl ?? null,
+          modelName: body.modelName ?? null,
+          apiToken:
+            body.apiToken !== null && body.apiToken !== undefined
+              ? body.apiToken === ""
+                ? ""
+                : encrypt(body.apiToken)
+              : null,
+          timeout: body.timeout ?? null,
         },
       });
 
-      return updated;
+      return toApiManagedModel(updated);
     },
   }),
 
