@@ -947,6 +947,23 @@ export type TableViewPreset = {
   search_query: string | null;
   order_by: unknown | null;
 };
+export type TaskTemplate = {
+  id: string;
+  created_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+  project_id: string;
+  name: string;
+  version: number;
+  type: Generated<string>;
+  managed_model_id: string;
+  model_options: unknown | null;
+  prompt_config: unknown;
+  input_forms: unknown | null;
+  output_key: Generated<string>;
+  labels: Generated<string[]>;
+  tags: Generated<string[]>;
+  commit_message: string | null;
+};
 export type TraceMedia = {
   id: string;
   project_id: string;
@@ -1055,6 +1072,7 @@ export type DB = {
   string_resources: StringResource;
   surveys: Survey;
   table_view_presets: TableViewPreset;
+  task_templates: TaskTemplate;
   trace_media: TraceMedia;
   trace_sessions: TraceSession;
   traces: LegacyPrismaTrace;
