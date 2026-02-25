@@ -117,6 +117,9 @@ model Organization {
   ApiKey                           ApiKey[]
   surveys                          Survey[]
   cloudSpendAlerts                 CloudSpendAlert[]
+  menuTemplates                    MenuTemplate[]
+  stringResources                  StringResource[]
+  drawableResources                DrawableResource[]
 
   @@map("organizations")
 }
@@ -177,7 +180,7 @@ model Project {
   AnnotationQueueAssignment AnnotationQueueAssignment[]
   NotificationPreference    NotificationPreference[]
   DefaultView               DefaultView[]
-
+  ManagedModel              ManagedModel[]
   @@index([orgId])
   @@map("projects")
 }
@@ -1616,4 +1619,87 @@ model CloudSpendAlert {
 
   @@index([orgId])
   @@map("cloud_spend_alerts")
+}
+
+model ManagedModel {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  projectId String  @map("project_id")
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  modelId            String  @map("model_id")
+  displayName        String  @map("display_name")
+  brand              String
+  brandDisplayName   String  @map("brand_display_name")
+  maxInputTokenSize  Int?    @map("max_input_token_size")
+  maxOutputTokenSize Int?    @map("max_output_token_size")
+  contextWindowSize  Int?    @map("context_window_size")
+  isSupported        Boolean @default(true) @map("is_supported")
+  sortOrder          Int     @default(0) @map("sort_order")
+  capabilities       Json?
+
+  @@unique([projectId, modelId])
+  @@index([projectId])
+  @@map("managed_models")
+}
+
+model MenuTemplate {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  orgId        String       @map("org_id")
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  product       String
+  version       Int
+  content       Json
+  labels        String[]  @default([])
+  commitMessage String?   @map("commit_message")
+
+  @@unique([orgId, product, version])
+  @@index([orgId])
+  @@index([orgId, product])
+  @@map("menu_templates")
+}
+
+model StringResource {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  orgId        String       @map("org_id")
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  category String
+  key      String
+  locale   String
+  value    String @db.Text
+
+  @@unique([orgId, category, key, locale])
+  @@index([orgId])
+  @@index([orgId, locale])
+  @@index([orgId, category])
+  @@map("string_resources")
+}
+
+model DrawableResource {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  orgId        String       @map("org_id")
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  filename    String
+  locale      String
+  contentType String @map("content_type")
+  content     String @db.Text
+
+  @@unique([orgId, filename, locale])
+  @@index([orgId])
+  @@index([orgId, locale])
+  @@map("drawable_resources")
 }

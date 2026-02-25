@@ -42,6 +42,9 @@ export const projectScopes = [
 
   "models:CUD",
 
+  "managedModels:read",
+  "managedModels:CUD",
+
   "batchExports:create",
   "batchExports:read",
 
@@ -104,6 +107,8 @@ export const projectRoleAccessRights: Record<Role, ProjectScope[]> = {
     "prompts:read",
     "promptProtectedLabels:CUD",
     "models:CUD",
+    "managedModels:read",
+    "managedModels:CUD",
     "evalTemplate:CUD",
     "evalTemplate:read",
     "evalJob:CUD",
@@ -157,6 +162,8 @@ export const projectRoleAccessRights: Record<Role, ProjectScope[]> = {
     "prompts:read",
     "promptProtectedLabels:CUD",
     "models:CUD",
+    "managedModels:read",
+    "managedModels:CUD",
     "evalTemplate:CUD",
     "evalTemplate:read",
     "evalJob:CUD",
@@ -213,6 +220,7 @@ export const projectRoleAccessRights: Record<Role, ProjectScope[]> = {
     "llmApiKeys:read",
     "llmSchemas:read",
     "llmTools:read",
+    "managedModels:read",
     "batchExports:create",
     "batchExports:read",
     "comments:CUD",
@@ -239,6 +247,7 @@ export const projectRoleAccessRights: Record<Role, ProjectScope[]> = {
     "llmApiKeys:read",
     "llmSchemas:read",
     "llmTools:read",
+    "managedModels:read",
     "comments:read",
     "annotationQueues:read",
     "promptExperiments:read",

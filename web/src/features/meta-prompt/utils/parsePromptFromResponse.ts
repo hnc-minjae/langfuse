@@ -9,7 +9,9 @@ export function parsePromptFromResponse(
   response: string,
 ): ParsedPromptResponse {
   return {
-    improvedPrompt: extractSection(response, "## Improved Prompt"),
+    improvedPrompt:
+      extractSection(response, "## Improved Prompt") ??
+      extractSection(response, "## Final Prompt"),
     clarifyingQuestions: extractSection(response, "## Clarifying Questions"),
     assumptions: extractSection(response, "## Assumptions"),
     fillInChecklist: extractSection(response, "## User Fill-in Checklist"),

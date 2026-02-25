@@ -136,4 +136,35 @@ describe("buildMetaPromptMessages", () => {
     expect(result.length).toBe(1);
     expect(result[0].role).toBe(ChatMessageRole.System);
   });
+
+  describe("multi-turn conversation support", () => {
+    it("should include conversation phase instructions in system prompt", () => {
+      const result = buildMetaPromptMessages({
+        userMessages: [createUserMessage("test")],
+        targetPlatform: "generic",
+      });
+
+      const systemContent = result[0].content as string;
+
+      // System prompt must support multi-turn conversation flow
+      // and not force structured output on every response
+      expect(systemContent).toMatch(
+        /finali[sz]|complete|done|satisfied|accept/i,
+      );
+    });
+
+    it("should not force structured output format on every response", () => {
+      const result = buildMetaPromptMessages({
+        userMessages: [createUserMessage("test")],
+        targetPlatform: "generic",
+      });
+
+      const systemContent = result[0].content as string;
+
+      // System prompt should NOT say responses MUST always follow the structured format
+      expect(systemContent).not.toMatch(
+        /your response MUST follow this structure exactly/i,
+      );
+    });
+  });
 });

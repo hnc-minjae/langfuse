@@ -1,0 +1,12 @@
+{
+  "name": "migrate-officebot-resources",
+  "private": true,
+  "scripts": {
+    "start": "ts-node --project tsconfig.json index.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "workspace:*",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.0.0"
+  }
+}

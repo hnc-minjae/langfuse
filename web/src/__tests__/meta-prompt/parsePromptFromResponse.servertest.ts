@@ -145,4 +145,33 @@ The prompt text.`;
     expect(result.assumptions).toBe("Assumption A.");
     expect(result.improvedPrompt).toBe("The prompt text.");
   });
+
+  it("should parse Final Prompt section from finalization response", () => {
+    const response = `Here is your finalized prompt. No further changes needed.
+
+## Final Prompt
+### Task
+Translate user input to formal Korean.
+### Output Format
+Return only the translated text.`;
+
+    const result = parsePromptFromResponse(response);
+
+    expect(result.improvedPrompt).toContain(
+      "Translate user input to formal Korean.",
+    );
+    expect(result.improvedPrompt).toContain("### Output Format");
+  });
+
+  it("should prefer Improved Prompt over Final Prompt when both exist", () => {
+    const response = `## Improved Prompt
+The improved version.
+
+## Final Prompt
+The final version.`;
+
+    const result = parsePromptFromResponse(response);
+
+    expect(result.improvedPrompt).toBe("The improved version.");
+  });
 });
