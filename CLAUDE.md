@@ -215,3 +215,152 @@ sendMessage({ userId: someString, sessionId: someOtherString, projectId: another
 
 ## Development Tips
 - Before trying to build the package, try running the linter once first
+
+## Custom Features (feat/meta-prompt branch)
+
+### Meta Prompt - AI-Assisted Prompt Creation
+
+AI와 대화하며 프롬프트를 자동 생성/개선하는 기능. 프롬프트 목록 페이지에서 "New prompt with AI" 버튼으로 진입합니다.
+
+**진입점**: `/project/[projectId]/prompts` → "New prompt with AI" 버튼 → `/project/[projectId]/prompts/new-with-ai`
+
+**구조**:
+- 좌측 ChatPanel: AI와 대화하며 프롬프트 생성 (스트리밍)
+- 우측 PromptEditorPanel: 생성된 프롬프트를 NewPromptForm에 적용하여 저장
+- 데스크톱: 2-column 레이아웃 / 모바일: Tabs 전환
+
+**핵심 기술**:
+- `fetchLLMCompletion()` (LangChain 기반) + `StreamingTextResponse` 으로 스트리밍 응답
+- 프로젝트의 LLM API Keys (`LlmApiKeys` 모델)를 활용한 모델/프로바이더 선택
+- 플랫폼별 포매팅 규칙: OpenAI (### 블록), Claude (XML 태그), Gemini (System/User 분리), generic
+- AI 응답에서 `## Improved Prompt`, `## Clarifying Questions` 등 섹션 자동 파싱
+
+**파일 구조**:
+```
+web/src/features/meta-prompt/
+├── types.ts                              # 공유 타입 (MetaPromptMessage, TargetPlatform 등)
+├── constants/systemPrompt.ts             # 시스템 프롬프트 + PLATFORM_RULES
+├── utils/parsePromptFromResponse.ts      # AI 응답 섹션 파싱
+├── server/
+│   ├── validation.ts                     # Zod v4 요청 스키마
+│   ├── buildMetaPromptMessages.ts        # 플랫폼별 시스템 프롬프트 주입
+│   └── metaPromptCompletionHandler.ts    # 인증 → LLM 호출 → 스트리밍 응답
+├── context/MetaPromptProvider.tsx        # React Context + 스트리밍 fetch
+└── components/
+    ├── ModelSelector.tsx                 # Provider/Model/TargetPlatform 드롭다운
+    ├── ChatHistory.tsx                   # 채팅 히스토리 (마크다운 렌더링)
+    ├── ChatInput.tsx                     # 채팅 입력 (auto-resize, Enter 전송)
+    ├── ChatPanel.tsx                     # 채팅 패널 조합
+    ├── ApplyToEditorButton.tsx           # "Apply to Editor" 버튼
+    ├── PromptEditorPanel.tsx             # NewPromptForm ref 연결
+    └── MetaPromptPage.tsx                # 메인 페이지 레이아웃
+```
+
+**API 엔드포인트**: `POST /api/metaPromptCompletion` (`web/src/app/api/metaPromptCompletion/route.ts`)
+
+**수정된 기존 파일**:
+- `web/src/pages/project/[projectId]/prompts/[[...folder]].tsx` - "New prompt with AI" 버튼 추가
+- `web/src/features/prompts/components/NewPromptForm/index.tsx` - `forwardRef` + `useImperativeHandle` 추가
+
+**테스트** (28개, 모두 PASS):
+```sh
+pnpm test-sync --testPathPatterns="meta-prompt"
+```
+- `web/src/__tests__/meta-prompt/parsePromptFromResponse.servertest.ts` (8 tests)
+- `web/src/__tests__/meta-prompt/buildMetaPromptMessages.servertest.ts` (9 tests)
+- `web/src/__tests__/meta-prompt/validation.servertest.ts` (11 tests)
+
+### Public REST API for Managed Models & Resources (feat/public-rest-api-resources branch)
+
+UI에서 tRPC로만 접근 가능했던 4개 리소스를 외부 시스템/스크립트에서도 사용할 수 있도록 Public REST API로 노출.
+
+**인증 방식**:
+- **Project-scoped** (Managed Models): Basic Auth with project API key → `createAuthedProjectAPIRoute`
+- **Org-scoped** (Menu Templates, String Resources, Drawable Resources): Basic Auth with org API key → `createAuthedOrgAPIRoute`
+
+**API 엔드포인트 (22개)**:
+
+| 리소스 | Scope | 엔드포인트 수 | URL prefix |
+|--------|-------|-------------|------------|
+| Managed Models | Project | 6 | `/api/public/managed-models` |
+| Menu Templates | Org | 6 | `/api/public/organizations/menu-templates` |
+| String Resources | Org | 7 | `/api/public/organizations/string-resources` |
+| Drawable Resources | Org | 7 | `/api/public/organizations/drawable-resources` |
+
+**핵심 설계**:
+- `createAuthedOrgAPIRoute` 헬퍼: `createAuthedProjectAPIRoute`의 org 버전. `accessLevel === "organization"` 검증, Rate limiting, OTel context 동일 적용
+- Pagination: Public API는 1-indexed (`publicApiPaginationZod`), tRPC는 0-indexed → `skip: (page - 1) * limit`
+- Drawable 목록 조회 시 `content` 필드 제외 (메타데이터만), 단건 조회에서만 포함
+- Bulk upsert: String Resources는 500개 배치 처리, 나머지는 단일 트랜잭션
+
+**파일 구조**:
+```
+web/src/features/public-api/
+├── server/
+│   ├── createAuthedProjectAPIRoute.ts   # 기존 project 인증 헬퍼
+│   └── createAuthedOrgAPIRoute.ts       # 신규 org 인증 헬퍼
+└── types/
+    ├── managed-models.ts                # Managed Models Zod 스키마
+    ├── menu-templates.ts                # Menu Templates Zod 스키마
+    ├── string-resources.ts              # String Resources Zod 스키마
+    └── drawable-resources.ts            # Drawable Resources Zod 스키마
+
+web/src/pages/api/public/
+├── managed-models/
+│   ├── index.ts                         # GET (list) + POST (create)
+│   ├── [id]/index.ts                    # GET + PUT + DELETE
+│   └── bulk/index.ts                    # POST (bulk upsert)
+└── organizations/
+    ├── menu-templates/
+    │   ├── index.ts                     # POST (create, auto-version)
+    │   ├── products/index.ts            # GET (product list)
+    │   ├── products/[product]/versions/index.ts  # GET (versions)
+    │   ├── [id]/index.ts               # GET + DELETE
+    │   └── [id]/labels/index.ts        # PATCH (labels)
+    ├── string-resources/
+    │   ├── index.ts                     # GET (list) + POST (create)
+    │   ├── categories/index.ts          # GET (distinct categories)
+    │   ├── locales/index.ts             # GET (distinct locales)
+    │   ├── [id]/index.ts               # GET + PUT + DELETE
+    │   └── bulk/index.ts               # POST (bulk upsert)
+    └── drawable-resources/
+        ├── index.ts                     # GET (list, no content) + POST (create)
+        ├── locales/index.ts             # GET (distinct locales)
+        ├── [id]/index.ts               # GET (with content) + PUT + DELETE
+        └── bulk/index.ts               # POST (bulk upsert)
+```
+
+**테스트** (4파일):
+```sh
+pnpm test -- --testPathPatterns="managed-models-api|menu-templates-api|string-resources-api|drawable-resources-api"
+```
+- `web/src/__tests__/async/managed-models-api.servertest.ts` — CRUD, pagination, search, brand filter, tenant isolation, bulk upsert
+- `web/src/__tests__/async/menu-templates-api.servertest.ts` — CRUD, auto-version, products, labels PATCH, tenant isolation
+- `web/src/__tests__/async/string-resources-api.servertest.ts` — CRUD, category/locale filter, categories/locales endpoints, bulk upsert, tenant isolation
+- `web/src/__tests__/async/drawable-resources-api.servertest.ts` — CRUD, content 제외 확인, locale filter, bulk upsert, tenant isolation
+
+**curl 예시**:
+```bash
+# Project-scoped (Managed Models)
+curl -u pk:sk http://localhost:3000/api/public/managed-models
+
+# Org-scoped (String Resources)
+curl -u org-pk:org-sk http://localhost:3000/api/public/organizations/string-resources
+```
+
+## Claude Code Configuration (.claude/)
+
+### Agents (`.claude/agents/`)
+| Agent | 설명 |
+|-------|------|
+| `changelog-writer.md` | 피처 브랜치 완료 후 changelog 작성 |
+| `meta-prompt-dev.md` | Meta Prompt 기능 개발 팀 (backend → frontend → test → build 파이프라인) |
+
+### Skills (`.claude/skills/`)
+| Skill | 설명 |
+|-------|------|
+| `skill-developer` | Claude Code 스킬 생성/관리 메타 스킬 |
+| `add-model-price` | `default-model-prices.json`에 LLM 모델 가격 추가 |
+| `backend-dev-guidelines` | Next.js/tRPC/Express 백엔드 개발 패턴 가이드 |
+
+트리거 규칙: `.claude/skills/skill-rules.json`

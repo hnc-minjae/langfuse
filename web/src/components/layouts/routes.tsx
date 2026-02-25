@@ -18,6 +18,10 @@ import {
   SquarePercent,
   ClipboardPen,
   Clock,
+  Cpu,
+  Languages,
+  Image,
+  Menu,
 } from "lucide-react";
 import { type ReactNode } from "react";
 import { type Entitlement } from "@/src/features/entitlements/constants/entitlements";
@@ -40,6 +44,8 @@ export enum RouteSection {
 export enum RouteGroup {
   Observability = "Observability",
   PromptManagement = "Prompt Management",
+  Models = "Models",
+  Resources = "Resources",
   Evaluation = "Evaluation",
 }
 
@@ -136,6 +142,47 @@ export const ROUTES: Route[] = [
     icon: TerminalIcon,
     productModule: "playground",
     group: RouteGroup.PromptManagement,
+    section: RouteSection.Main,
+  },
+  {
+    title: "Models",
+    pathname: "/project/[projectId]/models",
+    icon: Cpu,
+    projectRbacScopes: ["managedModels:read"],
+    productModule: "models",
+    group: RouteGroup.Models,
+    section: RouteSection.Main,
+  },
+  {
+    title: "Playground",
+    pathname: "/project/[projectId]/models/playground",
+    icon: TerminalIcon,
+    productModule: "models",
+    group: RouteGroup.Models,
+    section: RouteSection.Main,
+  },
+  {
+    title: "Menu Templates",
+    pathname: "/organization/[organizationId]/resources/menu-templates",
+    icon: Menu,
+    group: RouteGroup.Resources,
+    organizationRbacScope: "resources:read",
+    section: RouteSection.Main,
+  },
+  {
+    title: "Strings",
+    pathname: "/organization/[organizationId]/resources/strings",
+    icon: Languages,
+    group: RouteGroup.Resources,
+    organizationRbacScope: "resources:read",
+    section: RouteSection.Main,
+  },
+  {
+    title: "Drawables",
+    pathname: "/organization/[organizationId]/resources/drawables",
+    icon: Image,
+    group: RouteGroup.Resources,
+    organizationRbacScope: "resources:read",
     section: RouteSection.Main,
   },
   {

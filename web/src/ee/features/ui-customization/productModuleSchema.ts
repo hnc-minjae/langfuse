@@ -10,6 +10,7 @@ export const PRODUCT_MODULES = [
   "prompt-management",
   "playground",
   "datasets",
+  "models",
 ] as const;
 
 /**

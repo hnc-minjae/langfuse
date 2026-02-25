@@ -1,14 +1,11 @@
 import { useRouter } from "next/router";
-import { useEffect } from "react";
+import { ModelsPage } from "@/src/features/managed-models/page/ModelsPage";
 
-export default function ModelsPage() {
+export default function ModelsPageRoute() {
   const router = useRouter();
   const projectId = router.query.projectId as string;
 
-  // temporarily redirect to settings/models
-  useEffect(() => {
-    router.replace(`/project/${projectId}/settings/models`);
-  }, [projectId, router]);
+  if (!projectId) return null;
 
-  return null;
+  return <ModelsPage projectId={projectId} />;
 }

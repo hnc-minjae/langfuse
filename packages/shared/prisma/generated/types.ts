@@ -505,6 +505,16 @@ export type DefaultView = {
   view_name: string;
   view_id: string;
 };
+export type DrawableResource = {
+  id: string;
+  created_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+  org_id: string;
+  filename: string;
+  locale: string;
+  content_type: string;
+  content: string;
+};
 export type EvalTemplate = {
   id: string;
   created_at: Generated<Timestamp>;
@@ -660,6 +670,22 @@ export type LlmTool = {
   description: string;
   parameters: unknown;
 };
+export type ManagedModel = {
+  id: string;
+  created_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+  project_id: string;
+  model_id: string;
+  display_name: string;
+  brand: string;
+  brand_display_name: string;
+  max_input_token_size: number | null;
+  max_output_token_size: number | null;
+  context_window_size: number | null;
+  is_supported: Generated<boolean>;
+  sort_order: Generated<number>;
+  capabilities: unknown | null;
+};
 export type Media = {
   id: string;
   sha_256_hash: string;
@@ -684,6 +710,17 @@ export type MembershipInvitation = {
   invited_by_user_id: string | null;
   created_at: Generated<Timestamp>;
   updated_at: Generated<Timestamp>;
+};
+export type MenuTemplate = {
+  id: string;
+  created_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+  org_id: string;
+  product: string;
+  version: number;
+  content: unknown;
+  labels: Generated<string[]>;
+  commit_message: string | null;
 };
 export type MixpanelIntegration = {
   project_id: string;
@@ -876,6 +913,16 @@ export type SsoConfig = {
   auth_provider: string;
   auth_config: unknown | null;
 };
+export type StringResource = {
+  id: string;
+  created_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+  org_id: string;
+  category: string;
+  key: string;
+  locale: string;
+  value: string;
+};
 export type Survey = {
   id: string;
   created_at: Generated<Timestamp>;
@@ -973,14 +1020,17 @@ export type DB = {
   datasets: Dataset;
   default_llm_models: DefaultLlmModel;
   default_views: DefaultView;
+  drawable_resources: DrawableResource;
   eval_templates: EvalTemplate;
   job_configurations: JobConfiguration;
   job_executions: JobExecution;
   llm_api_keys: LlmApiKeys;
   llm_schemas: LlmSchema;
   llm_tools: LlmTool;
+  managed_models: ManagedModel;
   media: Media;
   membership_invitations: MembershipInvitation;
+  menu_templates: MenuTemplate;
   mixpanel_integrations: MixpanelIntegration;
   models: Model;
   notification_preferences: NotificationPreference;
@@ -1002,6 +1052,7 @@ export type DB = {
   Session: Session;
   slack_integrations: SlackIntegration;
   sso_configs: SsoConfig;
+  string_resources: StringResource;
   surveys: Survey;
   table_view_presets: TableViewPreset;
   trace_media: TraceMedia;

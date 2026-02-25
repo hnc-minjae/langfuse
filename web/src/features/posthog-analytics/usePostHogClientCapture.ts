@@ -71,6 +71,7 @@ export const events = {
   prompts: [
     "new_form_submit",
     "new_form_open",
+    "new_with_ai_form_open",
     "update_form_open",
     "update_form_submit",
   ],
