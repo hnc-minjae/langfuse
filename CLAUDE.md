@@ -270,6 +270,84 @@ pnpm test-sync --testPathPatterns="meta-prompt"
 - `web/src/__tests__/meta-prompt/buildMetaPromptMessages.servertest.ts` (9 tests)
 - `web/src/__tests__/meta-prompt/validation.servertest.ts` (11 tests)
 
+### Public REST API for Managed Models & Resources (feat/public-rest-api-resources branch)
+
+UI에서 tRPC로만 접근 가능했던 4개 리소스를 외부 시스템/스크립트에서도 사용할 수 있도록 Public REST API로 노출.
+
+**인증 방식**:
+- **Project-scoped** (Managed Models): Basic Auth with project API key → `createAuthedProjectAPIRoute`
+- **Org-scoped** (Menu Templates, String Resources, Drawable Resources): Basic Auth with org API key → `createAuthedOrgAPIRoute`
+
+**API 엔드포인트 (22개)**:
+
+| 리소스 | Scope | 엔드포인트 수 | URL prefix |
+|--------|-------|-------------|------------|
+| Managed Models | Project | 6 | `/api/public/managed-models` |
+| Menu Templates | Org | 6 | `/api/public/organizations/menu-templates` |
+| String Resources | Org | 7 | `/api/public/organizations/string-resources` |
+| Drawable Resources | Org | 7 | `/api/public/organizations/drawable-resources` |
+
+**핵심 설계**:
+- `createAuthedOrgAPIRoute` 헬퍼: `createAuthedProjectAPIRoute`의 org 버전. `accessLevel === "organization"` 검증, Rate limiting, OTel context 동일 적용
+- Pagination: Public API는 1-indexed (`publicApiPaginationZod`), tRPC는 0-indexed → `skip: (page - 1) * limit`
+- Drawable 목록 조회 시 `content` 필드 제외 (메타데이터만), 단건 조회에서만 포함
+- Bulk upsert: String Resources는 500개 배치 처리, 나머지는 단일 트랜잭션
+
+**파일 구조**:
+```
+web/src/features/public-api/
+├── server/
+│   ├── createAuthedProjectAPIRoute.ts   # 기존 project 인증 헬퍼
+│   └── createAuthedOrgAPIRoute.ts       # 신규 org 인증 헬퍼
+└── types/
+    ├── managed-models.ts                # Managed Models Zod 스키마
+    ├── menu-templates.ts                # Menu Templates Zod 스키마
+    ├── string-resources.ts              # String Resources Zod 스키마
+    └── drawable-resources.ts            # Drawable Resources Zod 스키마
+
+web/src/pages/api/public/
+├── managed-models/
+│   ├── index.ts                         # GET (list) + POST (create)
+│   ├── [id]/index.ts                    # GET + PUT + DELETE
+│   └── bulk/index.ts                    # POST (bulk upsert)
+└── organizations/
+    ├── menu-templates/
+    │   ├── index.ts                     # POST (create, auto-version)
+    │   ├── products/index.ts            # GET (product list)
+    │   ├── products/[product]/versions/index.ts  # GET (versions)
+    │   ├── [id]/index.ts               # GET + DELETE
+    │   └── [id]/labels/index.ts        # PATCH (labels)
+    ├── string-resources/
+    │   ├── index.ts                     # GET (list) + POST (create)
+    │   ├── categories/index.ts          # GET (distinct categories)
+    │   ├── locales/index.ts             # GET (distinct locales)
+    │   ├── [id]/index.ts               # GET + PUT + DELETE
+    │   └── bulk/index.ts               # POST (bulk upsert)
+    └── drawable-resources/
+        ├── index.ts                     # GET (list, no content) + POST (create)
+        ├── locales/index.ts             # GET (distinct locales)
+        ├── [id]/index.ts               # GET (with content) + PUT + DELETE
+        └── bulk/index.ts               # POST (bulk upsert)
+```
+
+**테스트** (4파일):
+```sh
+pnpm test -- --testPathPatterns="managed-models-api|menu-templates-api|string-resources-api|drawable-resources-api"
+```
+- `web/src/__tests__/async/managed-models-api.servertest.ts` — CRUD, pagination, search, brand filter, tenant isolation, bulk upsert
+- `web/src/__tests__/async/menu-templates-api.servertest.ts` — CRUD, auto-version, products, labels PATCH, tenant isolation
+- `web/src/__tests__/async/string-resources-api.servertest.ts` — CRUD, category/locale filter, categories/locales endpoints, bulk upsert, tenant isolation
+- `web/src/__tests__/async/drawable-resources-api.servertest.ts` — CRUD, content 제외 확인, locale filter, bulk upsert, tenant isolation
+
+**curl 예시**:
+```bash
+# Project-scoped (Managed Models)
+curl -u pk:sk http://localhost:3000/api/public/managed-models
+
+# Org-scoped (String Resources)
+curl -u org-pk:org-sk http://localhost:3000/api/public/organizations/string-resources
+```
+
 ## Claude Code Configuration (.claude/)
 
 ### Agents (`.claude/agents/`)
