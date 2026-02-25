@@ -348,6 +348,70 @@ curl -u pk:sk http://localhost:3000/api/public/managed-models
 curl -u org-pk:org-sk http://localhost:3000/api/public/organizations/string-resources
 ```
 
+### Task Template Execution Engine (feat/task-template-engine branch)
+
+coconut SDK의 Task Template 실행 엔진을 TypeScript로 구현. Task Template 정의를 읽고, ManagedModel을 해석하여 LLM API Key를 찾고, 프롬프트를 포매팅하여 LLM API를 호출.
+
+**핵심 구성요소**:
+- `resolveModelConnection`: ManagedModel.brand → LlmApiKeys.provider 매핑으로 API 자격증명 해석
+- `promptBuilder`: 변수 치환({{var}}, {var}) + chat/general 타입별 메시지 빌드
+- `taskTemplateRouter`: tRPC CRUD + execute
+- Public REST API: CRUD + execute(JSON) + stream(SSE)
+
+**Prisma 모델**: `TaskTemplate` (project-scoped, auto-versioning by name)
+
+**API 엔드포인트** (7개):
+
+| Method | URL | 설명 |
+|--------|-----|------|
+| GET | `/api/public/task-templates` | 목록 (pagination, search, typeFilter) |
+| POST | `/api/public/task-templates` | 생성 (자동 버전 증가) |
+| GET | `/api/public/task-templates/[id]` | 단건 조회 |
+| PUT | `/api/public/task-templates/[id]` | 수정 |
+| DELETE | `/api/public/task-templates/[id]` | 삭제 |
+| POST | `/api/public/task-templates/[id]/execute` | 실행 (JSON) |
+| POST | `/api/public/task-templates/[id]/stream` | 실행 (SSE 스트리밍) |
+
+**RBAC 스코프**: `taskTemplates:read`, `taskTemplates:CUD`, `taskTemplates:execute`
+
+**파일 구조**:
+```
+web/src/features/task-templates/
+├── types.ts                                    # 공유 타입
+├── validation.ts                               # Zod 스키마
+└── server/
+    ├── router.ts                               # tRPC 라우터
+    ├── resolveModelConnection.ts               # 모델 해석 브릿지
+    └── promptBuilder.ts                        # 프롬프트 빌더 + 변수 치환
+
+web/src/features/public-api/types/
+└── task-templates.ts                           # Public API Zod 스키마
+
+web/src/pages/api/public/task-templates/
+├── index.ts                                    # GET (list) + POST (create)
+└── [id]/
+    ├── index.ts                                # GET + PUT + DELETE
+    ├── execute.ts                              # POST (JSON 실행)
+    └── stream.ts                               # POST (SSE 스트리밍)
+```
+
+**테스트** (3파일, 59개):
+```sh
+# 단위 테스트 (44개)
+pnpm test-sync --testPathPatterns="task-templates"
+# 통합 테스트 (15개)
+pnpm test -- --testPathPatterns="task-templates-api"
+```
+
+**curl 예시**:
+```bash
+# CRUD
+curl -u pk:sk http://localhost:3000/api/public/task-templates
+# 실행
+curl -u pk:sk -X POST http://localhost:3000/api/public/task-templates/TEMPLATE_ID/execute \
+  -H 'Content-Type: application/json' -d '{"inputs": {"topic": "AI"}}'
+```
+
 ## Claude Code Configuration (.claude/)
 
 ### Agents (`.claude/agents/`)

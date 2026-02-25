@@ -54,6 +54,7 @@ import { surveysRouter } from "@/src/server/api/routers/surveys";
 import { naturalLanguageFilterRouter } from "@/src/features/natural-language-filters/server/router";
 import { notificationPreferencesRouter } from "@/src/server/api/routers/notificationPreferences";
 import { managedModelRouter } from "@/src/features/managed-models/server/router";
+import { taskTemplateRouter } from "@/src/features/task-templates/server/router";
 import { menuTemplateRouter } from "@/src/features/resource-management/server/menuTemplateRouter";
 import { stringResourceRouter } from "@/src/features/resource-management/server/stringResourceRouter";
 import { drawableResourceRouter } from "@/src/features/resource-management/server/drawableResourceRouter";
@@ -119,6 +120,7 @@ export const appRouter = createTRPCRouter({
   naturalLanguageFilters: naturalLanguageFilterRouter,
   notificationPreferences: notificationPreferencesRouter,
   managedModels: managedModelRouter,
+  taskTemplates: taskTemplateRouter,
   menuTemplates: menuTemplateRouter,
   stringResources: stringResourceRouter,
   drawableResources: drawableResourceRouter,

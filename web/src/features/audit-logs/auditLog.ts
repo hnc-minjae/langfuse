@@ -46,6 +46,7 @@ export type AuditableResource =
   | "menuTemplate"
   | "stringResource"
   | "drawableResource"
+  | "taskTemplate"
   // legacy resources
   | "membership";
 

@@ -80,6 +80,10 @@ export const projectScopes = [
 
   "automations:CUD",
   "automations:read",
+
+  "taskTemplates:read",
+  "taskTemplates:CUD",
+  "taskTemplates:execute",
 ] as const;
 
 // type string of all Resource:Action, e.g. "members:read"
@@ -141,6 +145,9 @@ export const projectRoleAccessRights: Record<Role, ProjectScope[]> = {
     "TableViewPresets:read",
     "automations:CUD",
     "automations:read",
+    "taskTemplates:read",
+    "taskTemplates:CUD",
+    "taskTemplates:execute",
   ],
   ADMIN: [
     "project:read",
@@ -196,6 +203,9 @@ export const projectRoleAccessRights: Record<Role, ProjectScope[]> = {
     "TableViewPresets:read",
     "automations:CUD",
     "automations:read",
+    "taskTemplates:read",
+    "taskTemplates:CUD",
+    "taskTemplates:execute",
   ],
   MEMBER: [
     "project:read",
@@ -235,6 +245,9 @@ export const projectRoleAccessRights: Record<Role, ProjectScope[]> = {
     "TableViewPresets:CUD",
     "TableViewPresets:read",
     "automations:read",
+    "taskTemplates:read",
+    "taskTemplates:CUD",
+    "taskTemplates:execute",
   ],
   VIEWER: [
     "project:read",
@@ -254,6 +267,7 @@ export const projectRoleAccessRights: Record<Role, ProjectScope[]> = {
     "dashboards:read",
     "TableViewPresets:read",
     "automations:read",
+    "taskTemplates:read",
   ],
   NONE: [],
 };
