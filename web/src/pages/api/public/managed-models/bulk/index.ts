@@ -6,7 +6,6 @@ import {
   PostBulkManagedModelsBody,
   PostBulkManagedModelsResponse,
 } from "@/src/features/public-api/types/managed-models";
-import { encrypt } from "@langfuse/shared/encryption";
 
 export default withMiddlewares({
   POST: createAuthedProjectAPIRoute({
@@ -16,15 +15,8 @@ export default withMiddlewares({
     successStatusCode: 201,
     fn: async ({ body, auth, res }) => {
       const results = await prisma.$transaction(
-        body.models.map((model) => {
-          const encryptedApiToken =
-            model.apiToken !== null && model.apiToken !== undefined
-              ? model.apiToken === ""
-                ? ""
-                : encrypt(model.apiToken)
-              : null;
-
-          return prisma.managedModel.upsert({
+        body.models.map((model) =>
+          prisma.managedModel.upsert({
             where: {
               projectId_modelId: {
                 projectId: auth.scope.projectId,
@@ -44,10 +36,6 @@ export default withMiddlewares({
               sortOrder: model.sortOrder,
               capabilities:
                 (model.capabilities as Prisma.InputJsonValue) ?? undefined,
-              baseUrl: model.baseUrl ?? null,
-              modelName: model.modelName ?? null,
-              apiToken: encryptedApiToken,
-              timeout: model.timeout ?? null,
             },
             update: {
               displayName: model.displayName,
@@ -60,13 +48,9 @@ export default withMiddlewares({
               sortOrder: model.sortOrder,
               capabilities:
                 (model.capabilities as Prisma.InputJsonValue) ?? undefined,
-              baseUrl: model.baseUrl ?? null,
-              modelName: model.modelName ?? null,
-              apiToken: encryptedApiToken,
-              timeout: model.timeout ?? null,
             },
-          });
-        }),
+          }),
+        ),
       );
 
       res.status(201);

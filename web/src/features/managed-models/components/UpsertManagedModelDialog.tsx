@@ -42,10 +42,6 @@ interface UpsertManagedModelDialogProps {
     isSupported: boolean;
     sortOrder: number;
     capabilities: unknown;
-    baseUrl: string | null;
-    modelName: string | null;
-    displayApiToken: string | null;
-    timeout: number | null;
   };
   children: React.ReactNode;
 }
@@ -72,10 +68,6 @@ export function UpsertManagedModelDialog({
       contextWindowSize: existingModel?.contextWindowSize ?? undefined,
       isSupported: existingModel?.isSupported ?? true,
       sortOrder: existingModel?.sortOrder ?? 0,
-      baseUrl: existingModel?.baseUrl ?? undefined,
-      modelName: existingModel?.modelName ?? undefined,
-      apiToken: undefined,
-      timeout: existingModel?.timeout ?? undefined,
     },
   });
 
@@ -281,111 +273,6 @@ export function UpsertManagedModelDialog({
                     </FormItem>
                   )}
                 />
-              </div>
-
-              <div className="space-y-2 rounded-lg border p-3">
-                <p className="text-sm font-medium text-muted-foreground">
-                  LLM Connection
-                </p>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="baseUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Base URL</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="https://api.openai.com/v1"
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) =>
-                              field.onChange(e.target.value || undefined)
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="modelName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Model Name (API)</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="gpt-4o-2024-08-06"
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) =>
-                              field.onChange(e.target.value || undefined)
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="apiToken"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          API Token
-                          {isEdit && existingModel?.displayApiToken && (
-                            <span className="ml-2 font-normal text-muted-foreground">
-                              ({existingModel.displayApiToken})
-                            </span>
-                          )}
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            type="password"
-                            placeholder={
-                              isEdit ? "Leave empty to keep current" : "sk-..."
-                            }
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) =>
-                              field.onChange(e.target.value || undefined)
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="timeout"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Timeout (seconds)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="120"
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) =>
-                              field.onChange(
-                                e.target.value
-                                  ? Number(e.target.value)
-                                  : undefined,
-                              )
-                            }
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

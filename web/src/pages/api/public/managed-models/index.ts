@@ -9,8 +9,6 @@ import {
   PostManagedModelResponse,
 } from "@/src/features/public-api/types/managed-models";
 import { InvalidRequestError } from "@langfuse/shared";
-import { encrypt } from "@langfuse/shared/encryption";
-import { toApiManagedModel } from "@/src/features/managed-models/utils";
 
 export default withMiddlewares({
   GET: createAuthedProjectAPIRoute({
@@ -58,7 +56,7 @@ export default withMiddlewares({
       ]);
 
       return {
-        data: models.map(toApiManagedModel),
+        data: models,
         meta: {
           page: query.page,
           limit: query.limit,
@@ -104,20 +102,11 @@ export default withMiddlewares({
           sortOrder: body.sortOrder,
           capabilities:
             (body.capabilities as Prisma.InputJsonValue) ?? undefined,
-          baseUrl: body.baseUrl ?? null,
-          modelName: body.modelName ?? null,
-          apiToken:
-            body.apiToken !== null && body.apiToken !== undefined
-              ? body.apiToken === ""
-                ? ""
-                : encrypt(body.apiToken)
-              : null,
-          timeout: body.timeout ?? null,
         },
       });
 
       res.status(201);
-      return toApiManagedModel(model);
+      return model;
     },
   }),
 });

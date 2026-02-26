@@ -1641,12 +1641,6 @@ model ManagedModel {
   sortOrder          Int     @default(0) @map("sort_order")
   capabilities       Json?
 
-  // LLM connection fields for task execution
-  baseUrl   String? @map("base_url")   // e.g. "http://10.10.230.56:9984/"
-  modelName String? @map("model_name") // actual API model name, e.g. "LGAI-EXAONE/EXAONE-4.0-32B-AWQ"
-  apiToken  String? @map("api_token")  // encrypted, empty string for keyless endpoints
-  timeout   Int?                        // request timeout in seconds
-
   @@unique([projectId, modelId])
   @@index([projectId])
   @@map("managed_models")
