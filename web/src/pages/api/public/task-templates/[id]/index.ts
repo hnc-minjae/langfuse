@@ -50,6 +50,7 @@ export default withMiddlewares({
       const configValidation = validatePromptConfig({
         type: existing.type,
         promptConfig: body.promptConfig,
+        tasks: body.tasks,
       });
       if (!configValidation.success) {
         throw new InvalidRequestError(configValidation.error);
@@ -63,6 +64,10 @@ export default withMiddlewares({
             (body.modelOptions as Prisma.InputJsonValue) ?? undefined,
           promptConfig: body.promptConfig as Prisma.InputJsonValue,
           inputForms: (body.inputForms as Prisma.InputJsonValue) ?? undefined,
+          ...(body.tasks !== undefined && {
+            tasks: body.tasks as unknown as Prisma.InputJsonValue,
+          }),
+          ...(body.interval !== undefined && { interval: body.interval }),
           ...(body.outputKey !== undefined && { outputKey: body.outputKey }),
           ...(body.labels !== undefined && { labels: body.labels }),
           ...(body.tags !== undefined && { tags: body.tags }),

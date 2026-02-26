@@ -959,6 +959,8 @@ export type TaskTemplate = {
   model_options: unknown | null;
   prompt_config: unknown;
   input_forms: unknown | null;
+  tasks: unknown | null;
+  interval: number | null;
   output_key: Generated<string>;
   labels: Generated<string[]>;
   tags: Generated<string[]>;

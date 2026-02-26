@@ -8,6 +8,7 @@ import {
   ChatPromptConfigSchema,
   GeneralPromptConfigSchema,
   TaskTemplateTypeSchema,
+  TaskDefinitionSchema,
   validatePromptConfig,
 } from "@/src/features/task-templates/validation";
 
@@ -22,8 +23,18 @@ describe("TaskTemplateTypeSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("should reject unknown type", () => {
+  it("should accept 'sequential' type", () => {
     const result = TaskTemplateTypeSchema.safeParse("sequential");
+    expect(result.success).toBe(true);
+  });
+
+  it("should accept 'multiple' type", () => {
+    const result = TaskTemplateTypeSchema.safeParse("multiple");
+    expect(result.success).toBe(true);
+  });
+
+  it("should reject unknown type", () => {
+    const result = TaskTemplateTypeSchema.safeParse("unknown-type");
     expect(result.success).toBe(false);
   });
 });
@@ -203,9 +214,85 @@ describe("validatePromptConfig", () => {
     expect(result.success).toBe(true);
   });
 
-  it("should reject unknown type", () => {
+  it("should reject sequential without tasks", () => {
     const result = validatePromptConfig({
       type: "sequential",
+      promptConfig: {},
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("requires at least one task");
+    }
+  });
+
+  it("should validate sequential with valid tasks", () => {
+    const result = validatePromptConfig({
+      type: "sequential",
+      promptConfig: {},
+      tasks: [
+        {
+          managedModelId: "gpt-4o",
+          promptConfig: {
+            instruction: "Generate a title",
+            inputVariables: ["topic"],
+          },
+          outputKey: "title",
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("should reject sequential with invalid task definition", () => {
+    const result = validatePromptConfig({
+      type: "sequential",
+      promptConfig: {},
+      tasks: [
+        {
+          // missing managedModelId
+          promptConfig: {
+            instruction: "Generate a title",
+            inputVariables: ["topic"],
+          },
+          outputKey: "title",
+        },
+      ],
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("Invalid task definition at index 0");
+    }
+  });
+
+  it("should validate multiple with valid tasks", () => {
+    const result = validatePromptConfig({
+      type: "multiple",
+      promptConfig: {},
+      tasks: [
+        {
+          managedModelId: "gpt-4o",
+          promptConfig: {
+            instruction: "Generate background",
+            inputVariables: ["topic"],
+          },
+          outputKey: "_AI_background",
+        },
+        {
+          managedModelId: "gpt-4o",
+          promptConfig: {
+            instruction: "Generate purpose",
+            inputVariables: ["topic"],
+          },
+          outputKey: "_AI_purpose",
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("should reject unknown type", () => {
+    const result = validatePromptConfig({
+      type: "unknown-type",
       promptConfig: {},
     });
     expect(result.success).toBe(false);

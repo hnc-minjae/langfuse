@@ -1716,7 +1716,7 @@ model TaskTemplate {
   name    String
   version Int
 
-  type String @default("chat") // "chat" | "general"
+  type String @default("chat") // "chat" | "general" | "sequential" | "multiple"
 
   managedModelId String @map("managed_model_id") // references ManagedModel.modelId
   modelOptions   Json?  @map("model_options") // { temperature, max_tokens, top_p, ... }
@@ -1726,6 +1726,10 @@ model TaskTemplate {
   // general: { instruction, context, inputVariables, examples: [{input, output}] }
 
   inputForms Json? @map("input_forms") // UI form definitions
+
+  // ── Multi-task fields (sequential, multiple) ──
+  tasks    Json? @map("tasks")    // TaskDefinition[] for sequential/multiple
+  interval Int?  @map("interval") // delay between sequential tasks (ms)
 
   outputKey String @default("text") @map("output_key")
 

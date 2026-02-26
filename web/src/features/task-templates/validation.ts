@@ -34,9 +34,27 @@ export const ModelOptionsSchema = z.object({
   maxReasoningTokens: z.number().int().positive().optional(),
 });
 
+// ── Task Definition Schema (for sequential/multiple) ─────
+
+export const TaskDefinitionSchema = z.object({
+  managedModelId: z.string().min(1, "Managed model ID is required"),
+  modelOptions: ModelOptionsSchema.optional(),
+  promptConfig: GeneralPromptConfigSchema,
+  outputKey: z.string().min(1, "Output key is required"),
+  outputParser: z.string().optional(), // "LineListOutputParser" | ""
+  outputFilter: z.string().optional(), // "JsonOutputFilter" | ""
+  streamingParser: z.string().optional(), // "JsonObjectKeyRouterStreamingParser" | ""
+  batchKey: z.string().optional(),
+});
+
 // ── Task Template Type Schema ─────────────────────────────
 
-export const TaskTemplateTypeSchema = z.enum(["chat", "general"]);
+export const TaskTemplateTypeSchema = z.enum([
+  "chat",
+  "general",
+  "sequential",
+  "multiple",
+]);
 
 // ── tRPC Input Schemas ────────────────────────────────────
 
@@ -48,6 +66,9 @@ export const CreateTaskTemplateInput = z.object({
   modelOptions: ModelOptionsSchema.optional(),
   promptConfig: z.record(z.string(), z.unknown()),
   inputForms: z.record(z.string(), z.unknown()).optional(),
+  // Multi-task fields (sequential, multiple)
+  tasks: z.array(TaskDefinitionSchema).optional(),
+  interval: z.number().int().min(0).optional(),
   outputKey: z.string().default("text"),
   labels: z.array(z.string()).default([]),
   tags: z.array(z.string()).default([]),
@@ -61,6 +82,9 @@ export const UpdateTaskTemplateInput = z.object({
   modelOptions: ModelOptionsSchema.optional(),
   promptConfig: z.record(z.string(), z.unknown()),
   inputForms: z.record(z.string(), z.unknown()).optional(),
+  // Multi-task fields (sequential, multiple)
+  tasks: z.array(TaskDefinitionSchema).optional(),
+  interval: z.number().int().min(0).optional(),
   outputKey: z.string().optional(),
   labels: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
@@ -92,8 +116,9 @@ export const ExecuteTaskTemplateInput = z.object({
 export function validatePromptConfig(params: {
   type: string;
   promptConfig: Record<string, unknown>;
+  tasks?: unknown[];
 }): { success: true } | { success: false; error: string } {
-  const { type, promptConfig } = params;
+  const { type, promptConfig, tasks } = params;
 
   if (type === "chat") {
     const result = ChatPromptConfigSchema.safeParse(promptConfig);
@@ -110,6 +135,22 @@ export function validatePromptConfig(params: {
         success: false,
         error: `Invalid general prompt config: ${result.error.message}`,
       };
+    }
+  } else if (type === "sequential" || type === "multiple") {
+    if (!tasks || tasks.length === 0) {
+      return {
+        success: false,
+        error: `${type} template requires at least one task in the tasks array`,
+      };
+    }
+    for (let i = 0; i < tasks.length; i++) {
+      const result = TaskDefinitionSchema.safeParse(tasks[i]);
+      if (!result.success) {
+        return {
+          success: false,
+          error: `Invalid task definition at index ${i}: ${result.error.message}`,
+        };
+      }
     }
   } else {
     return { success: false, error: `Unknown template type: ${type}` };

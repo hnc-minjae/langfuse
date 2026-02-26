@@ -16,6 +16,8 @@ const APITaskTemplate = z.object({
   modelOptions: z.any().nullable(),
   promptConfig: z.any(),
   inputForms: z.any().nullable(),
+  tasks: z.any().nullable(),
+  interval: z.number().int().nullable(),
   outputKey: z.string(),
   labels: z.array(z.string()),
   tags: z.array(z.string()),
@@ -45,7 +47,7 @@ export const GetTaskTemplatesResponse = z
 export const PostTaskTemplateBody = z
   .object({
     name: z.string().min(1),
-    type: z.enum(["chat", "general"]).default("chat"),
+    type: z.enum(["chat", "general", "sequential", "multiple"]).default("chat"),
     managedModelId: z.string().min(1),
     modelOptions: z
       .object({
@@ -57,6 +59,8 @@ export const PostTaskTemplateBody = z
       .optional(),
     promptConfig: z.record(z.string(), z.unknown()),
     inputForms: z.record(z.string(), z.unknown()).optional(),
+    tasks: z.array(z.record(z.string(), z.unknown())).optional(),
+    interval: z.number().int().min(0).optional(),
     outputKey: z.string().default("text"),
     labels: z.array(z.string()).default([]),
     tags: z.array(z.string()).default([]),
@@ -93,6 +97,8 @@ export const PutTaskTemplateBody = z
       .optional(),
     promptConfig: z.record(z.string(), z.unknown()),
     inputForms: z.record(z.string(), z.unknown()).optional(),
+    tasks: z.array(z.record(z.string(), z.unknown())).optional(),
+    interval: z.number().int().min(0).optional(),
     outputKey: z.string().optional(),
     labels: z.array(z.string()).optional(),
     tags: z.array(z.string()).optional(),

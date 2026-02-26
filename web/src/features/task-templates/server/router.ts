@@ -116,6 +116,7 @@ export const taskTemplateRouter = createTRPCRouter({
         const configValidation = validatePromptConfig({
           type: input.type,
           promptConfig: input.promptConfig,
+          tasks: input.tasks,
         });
         if (!configValidation.success) {
           throw new TRPCError({
@@ -143,6 +144,10 @@ export const taskTemplateRouter = createTRPCRouter({
             promptConfig: input.promptConfig as Prisma.InputJsonValue,
             inputForms:
               (input.inputForms as Prisma.InputJsonValue) ?? undefined,
+            tasks: input.tasks
+              ? (input.tasks as unknown as Prisma.InputJsonValue)
+              : undefined,
+            interval: input.interval ?? undefined,
             outputKey: input.outputKey,
             labels: input.labels,
             tags: input.tags,
@@ -194,6 +199,7 @@ export const taskTemplateRouter = createTRPCRouter({
         const configValidation = validatePromptConfig({
           type: existing.type,
           promptConfig: input.promptConfig,
+          tasks: input.tasks,
         });
         if (!configValidation.success) {
           throw new TRPCError({
@@ -211,6 +217,12 @@ export const taskTemplateRouter = createTRPCRouter({
             promptConfig: input.promptConfig as Prisma.InputJsonValue,
             inputForms:
               (input.inputForms as Prisma.InputJsonValue) ?? undefined,
+            ...(input.tasks !== undefined && {
+              tasks: input.tasks as unknown as Prisma.InputJsonValue,
+            }),
+            ...(input.interval !== undefined && {
+              interval: input.interval,
+            }),
             ...(input.outputKey !== undefined && {
               outputKey: input.outputKey,
             }),
