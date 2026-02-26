@@ -31,6 +31,25 @@ const UNSUPPORTED_ADAPTERS = new Set([
   "chat_gauss",
 ]);
 
+/**
+ * OpenAI SDK는 baseURL에 `/chat/completions`를 이어 붙이므로,
+ * vLLM 등 OpenAI-compatible 서버는 `/v1`이 포함된 URL이 필요합니다.
+ *
+ * 예: http://10.10.230.56:9984/ → http://10.10.230.56:9984/v1
+ *     https://api.openai.com/   → https://api.openai.com/v1 (이미 /v1 경로가 있으면 유지)
+ */
+function normalizeOpenAIBaseURL(url: string, adapter: string): string {
+  if (adapter !== "openai") return url;
+
+  // 이미 /v1으로 끝나면 그대로
+  if (url.replace(/\/+$/, "").endsWith("/v1")) return url;
+
+  // api.openai.com은 /v1 자동 추가
+  // 사내 서버(IP 기반)나 기타 OpenAI-compatible 서버도 /v1 추가
+  const trimmed = url.replace(/\/+$/, "");
+  return `${trimmed}/v1`;
+}
+
 function getDisplaySecretKey(secretKey: string): string {
   if (!secretKey || secretKey.startsWith("$")) {
     return secretKey || "(empty)";
@@ -87,7 +106,9 @@ export function transformConnections(scanned: ScannedConnection[]): {
       adapter,
       secretKey,
       displaySecretKey: getDisplaySecretKey(secretKey),
-      baseURL: llmConfig.baseUrl || null,
+      baseURL: llmConfig.baseUrl
+        ? normalizeOpenAIBaseURL(llmConfig.baseUrl, adapter)
+        : null,
       customModels: [llmConfig.model],
       withDefaultModels: false,
       config,
