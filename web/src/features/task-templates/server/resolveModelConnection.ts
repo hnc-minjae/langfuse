@@ -14,12 +14,12 @@ interface ResolvedModelConnection {
 }
 
 /**
- * Resolves model connection by looking up LlmApiKeys via ManagedModel.brand.
+ * Resolves model connection by looking up LlmApiKeys via ManagedModel.modelId.
  *
- * Flow:
- *   ManagedModel(modelId, brand) → LlmApiKeys(provider = brand)
+ * provider:model = 1:1 매핑 방식:
+ *   ManagedModel(modelId) → LlmApiKeys(provider = modelId)
  *   → adapter, secretKey, baseURL from LlmApiKeys
- *   → model name from ManagedModel.modelId
+ *   → model name from LlmApiKeys.customModels[0] or ManagedModel.modelId
  */
 export async function resolveModelConnection(params: {
   managedModelId: string;
@@ -39,15 +39,15 @@ export async function resolveModelConnection(params: {
     );
   }
 
-  // 2. Find LlmApiKeys by brand → provider
+  // 2. Find LlmApiKeys by modelId → provider (1:1 mapping)
   const llmApiKey = await prisma.llmApiKeys.findFirst({
-    where: { projectId, provider: managedModel.brand },
+    where: { projectId, provider: managedModel.modelId },
   });
 
   if (!llmApiKey) {
     throw new Error(
-      `No LLM API key found for provider "${managedModel.brand}" in project "${projectId}". ` +
-        `Please add one in Project Settings > LLM API Keys.`,
+      `No LLM API key found for provider "${managedModel.modelId}" in project "${projectId}". ` +
+        `Please add an LLM Connection with provider="${managedModel.modelId}" in Project Settings > LLM API Keys.`,
     );
   }
 
@@ -55,15 +55,21 @@ export async function resolveModelConnection(params: {
   const parsedKey = LLMApiKeySchema.safeParse(llmApiKey);
   if (!parsedKey.success) {
     throw new Error(
-      `Invalid LLM API key configuration for "${managedModel.brand}": ${parsedKey.error.message}`,
+      `Invalid LLM API key configuration for "${managedModel.modelId}": ${parsedKey.error.message}`,
     );
   }
 
   // 4. Build ModelParams — adapter comes from LlmApiKeys
+  //    model name: customModels[0] if set, otherwise modelId
+  const modelName =
+    parsedKey.data.customModels.length > 0
+      ? parsedKey.data.customModels[0]
+      : managedModel.modelId;
+
   const modelParams: ModelParams = {
-    provider: managedModel.brand,
+    provider: managedModel.modelId,
     adapter: parsedKey.data.adapter as LLMAdapter,
-    model: managedModel.modelId,
+    model: modelName,
     ...(modelOptions?.temperature !== undefined && {
       temperature: modelOptions.temperature,
     }),
