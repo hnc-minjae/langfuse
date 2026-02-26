@@ -28,10 +28,6 @@ type ManagedModelRow = {
   isSupported: boolean;
   sortOrder: number;
   capabilities: unknown;
-  baseUrl: string | null;
-  modelName: string | null;
-  displayApiToken: string | null;
-  timeout: number | null;
 };
 
 function formatTokenCount(count: number | null): string {
@@ -103,62 +99,6 @@ export function ManagedModelTable({ projectId }: { projectId: string }) {
       cell: ({ row }) => (
         <code className="text-xs">{row.original.modelId}</code>
       ),
-    },
-    {
-      accessorKey: "baseUrl",
-      id: "baseUrl",
-      header: "Base URL",
-      size: 200,
-      enableHiding: true,
-      cell: ({ row }) =>
-        row.original.baseUrl ? (
-          <code className="text-xs text-muted-foreground">
-            {row.original.baseUrl}
-          </code>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        ),
-    },
-    {
-      accessorKey: "modelName",
-      id: "modelName",
-      header: "Model Name",
-      size: 180,
-      enableHiding: true,
-      cell: ({ row }) =>
-        row.original.modelName ? (
-          <code className="text-xs">{row.original.modelName}</code>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        ),
-    },
-    {
-      accessorKey: "displayApiToken",
-      id: "displayApiToken",
-      header: "API Token",
-      size: 120,
-      enableHiding: true,
-      cell: ({ row }) =>
-        row.original.displayApiToken ? (
-          <code className="text-xs text-muted-foreground">
-            {row.original.displayApiToken}
-          </code>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        ),
-    },
-    {
-      accessorKey: "timeout",
-      id: "timeout",
-      header: "Timeout",
-      size: 80,
-      enableHiding: true,
-      cell: ({ row }) =>
-        row.original.timeout !== null ? (
-          <span>{row.original.timeout}s</span>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        ),
     },
     {
       accessorKey: "contextWindowSize",
