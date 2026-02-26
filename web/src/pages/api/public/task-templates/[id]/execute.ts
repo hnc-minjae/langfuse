@@ -12,8 +12,15 @@ import {
   buildMessages,
   validateInputs,
 } from "@/src/features/task-templates/server/promptBuilder";
+import {
+  executeSequential,
+  executeMultiple,
+} from "@/src/features/task-templates/server/executionEngine";
 import { fetchLLMCompletion } from "@langfuse/shared/src/server";
-import type { ModelOptions } from "@/src/features/task-templates/types";
+import type {
+  ModelOptions,
+  TaskDefinition,
+} from "@/src/features/task-templates/types";
 
 export default withMiddlewares({
   POST: createAuthedProjectAPIRoute({
@@ -30,7 +37,37 @@ export default withMiddlewares({
         throw new LangfuseNotFoundError("Task template not found");
       }
 
-      // Validate inputs against declared inputVariables
+      // Sequential / Multiple execution
+      if (template.type === "sequential" || template.type === "multiple") {
+        const tasks = template.tasks as unknown as TaskDefinition[];
+        if (!tasks || tasks.length === 0) {
+          throw new InvalidRequestError(
+            `${template.type} template has no tasks defined`,
+          );
+        }
+
+        const executeFn =
+          template.type === "sequential" ? executeSequential : executeMultiple;
+
+        const result = await executeFn({
+          tasks,
+          inputs: body.inputs,
+          projectId: auth.scope.projectId,
+          outputKey: template.outputKey,
+          ...(template.type === "sequential" && {
+            interval: template.interval ?? undefined,
+          }),
+        });
+
+        return {
+          success: result.success,
+          [template.outputKey]: result.output,
+          context: result.context,
+          latencyMs: result.latencyMs,
+        };
+      }
+
+      // Chat / General single-task execution
       const promptConfig = template.promptConfig as Record<string, unknown>;
       const inputVariables = (promptConfig.inputVariables as string[]) ?? [];
       const { missing } = validateInputs({

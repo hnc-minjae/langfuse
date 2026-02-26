@@ -51,7 +51,7 @@ export interface TaskDefinition {
  */
 export interface ExecutionResult {
   success: boolean;
-  output: string | Record<string, string>;
+  output: string | Record<string, string | string[]>;
   context: Record<string, string | string[]>;
   latencyMs: number;
   usage?: TokenUsage;

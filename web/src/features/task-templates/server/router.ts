@@ -18,7 +18,9 @@ import {
 } from "../validation";
 import { resolveModelConnection } from "./resolveModelConnection";
 import { buildMessages, validateInputs } from "./promptBuilder";
+import { executeSequential, executeMultiple } from "./executionEngine";
 import { fetchLLMCompletion } from "@langfuse/shared/src/server";
+import type { TaskDefinition } from "../types";
 
 export const taskTemplateRouter = createTRPCRouter({
   getAll: protectedProjectProcedure
@@ -319,7 +321,40 @@ export const taskTemplateRouter = createTRPCRouter({
           });
         }
 
-        // Validate inputs
+        // Sequential / Multiple execution
+        if (template.type === "sequential" || template.type === "multiple") {
+          const tasks = template.tasks as unknown as TaskDefinition[];
+          if (!tasks || tasks.length === 0) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `${template.type} template has no tasks defined`,
+            });
+          }
+
+          const executeFn =
+            template.type === "sequential"
+              ? executeSequential
+              : executeMultiple;
+
+          const result = await executeFn({
+            tasks,
+            inputs: input.inputs,
+            projectId: input.projectId,
+            outputKey: template.outputKey,
+            ...(template.type === "sequential" && {
+              interval: template.interval ?? undefined,
+            }),
+          });
+
+          return {
+            success: result.success,
+            [template.outputKey]: result.output,
+            context: result.context,
+            latencyMs: result.latencyMs,
+          };
+        }
+
+        // Chat / General single-task execution
         const promptConfig = template.promptConfig as Record<string, unknown>;
         const inputVariables = (promptConfig.inputVariables as string[]) ?? [];
         const { missing } = validateInputs({
