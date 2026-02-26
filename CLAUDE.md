@@ -352,13 +352,31 @@ curl -u org-pk:org-sk http://localhost:3000/api/public/organizations/string-reso
 
 coconut SDK의 Task Template 실행 엔진을 TypeScript로 구현. Task Template 정의를 읽고, ManagedModel을 해석하여 LLM API Key를 찾고, 프롬프트를 포매팅하여 LLM API를 호출.
 
+**v1 (완료)**: chat/general 단일 실행, CRUD, Public API
+**v2 (진행중)**: sequential/multiple 실행, Output Parsers/Filters, 구조화된 SSE, 토큰 사용량
+
 **핵심 구성요소**:
-- `resolveModelConnection`: ManagedModel.brand → LlmApiKeys.provider 매핑으로 API 자격증명 해석
+- `resolveModelConnection`: ManagedModel.modelId → LlmApiKeys.provider 1:1 매핑으로 API 자격증명 해석
 - `promptBuilder`: 변수 치환({{var}}, {var}) + chat/general 타입별 메시지 빌드
-- `taskTemplateRouter`: tRPC CRUD + execute
-- Public REST API: CRUD + execute(JSON) + stream(SSE)
+- `outputParsers` (v2): LineListOutputParser, JsonOutputFilter, JsonKeyStreamingParser
+- `executionEngine` (v2): Sequential(체이닝+batchKey), Multiple(병렬) 실행
+- `usageTracker` (v2): LangChain callback 기반 토큰 사용량 추적
 
 **Prisma 모델**: `TaskTemplate` (project-scoped, auto-versioning by name)
+- v1 필드: type("chat"|"general"), managedModelId, modelOptions, promptConfig, outputKey
+- v2 추가: type("sequential"|"multiple"), tasks(Json), interval(Int)
+
+**3-Layer Processing Pipeline** (coconut SDK 포팅):
+```
+LLM Output → OutputFilter(전처리) → OutputParser(후처리) → 결과
+스트리밍: LLM token → StreamingParser.accept(delta) → Listener events
+```
+
+| 컴포넌트 | template.json 값 | 동작 |
+|----------|------------------|------|
+| LineListOutputParser | `outputParser: "LineListOutputParser"` | `text.split("\n")` → `string[]` |
+| JsonOutputFilter | `outputFilter: "JsonOutputFilter"` | 깨진 JSON 수정 |
+| JsonKeyStreamingParser | `streamingParser: "JsonObjectKeyRouterStreamingParser"` | 스트리밍 JSON key별 라우팅 |
 
 **API 엔드포인트** (7개):
 
@@ -369,20 +387,23 @@ coconut SDK의 Task Template 실행 엔진을 TypeScript로 구현. Task Templat
 | GET | `/api/public/task-templates/[id]` | 단건 조회 |
 | PUT | `/api/public/task-templates/[id]` | 수정 |
 | DELETE | `/api/public/task-templates/[id]` | 삭제 |
-| POST | `/api/public/task-templates/[id]/execute` | 실행 (JSON) |
-| POST | `/api/public/task-templates/[id]/stream` | 실행 (SSE 스트리밍) |
+| POST | `/api/public/task-templates/[id]/execute` | 실행 (JSON, v2: +usage) |
+| POST | `/api/public/task-templates/[id]/stream` | 실행 (v2: 구조화된 SSE) |
 
 **RBAC 스코프**: `taskTemplates:read`, `taskTemplates:CUD`, `taskTemplates:execute`
 
 **파일 구조**:
 ```
 web/src/features/task-templates/
-├── types.ts                                    # 공유 타입
-├── validation.ts                               # Zod 스키마
+├── types.ts                                    # 공유 타입 (v2: TaskDefinition, ExecutionResult)
+├── validation.ts                               # Zod 스키마 (v2: Sequential/Multiple)
 └── server/
     ├── router.ts                               # tRPC 라우터
     ├── resolveModelConnection.ts               # 모델 해석 브릿지
-    └── promptBuilder.ts                        # 프롬프트 빌더 + 변수 치환
+    ├── promptBuilder.ts                        # 프롬프트 빌더 + 변수 치환
+    ├── outputParsers.ts                        # (v2) Parser/Filter/StreamingParser
+    ├── executionEngine.ts                      # (v2) Sequential/Multiple 실행
+    └── usageTracker.ts                         # (v2) 토큰 사용량 추적
 
 web/src/features/public-api/types/
 └── task-templates.ts                           # Public API Zod 스키마
@@ -395,11 +416,11 @@ web/src/pages/api/public/task-templates/
     └── stream.ts                               # POST (SSE 스트리밍)
 ```
 
-**테스트** (3파일, 59개):
+**테스트** (3파일, 59개 — v2에서 +5파일, +55 tests 예정):
 ```sh
-# 단위 테스트 (44개)
+# 단위 테스트 (44개, v2: +40)
 pnpm test-sync --testPathPatterns="task-templates"
-# 통합 테스트 (15개)
+# 통합 테스트 (15개, v2: +12)
 pnpm test -- --testPathPatterns="task-templates-api"
 ```
 
@@ -407,9 +428,12 @@ pnpm test -- --testPathPatterns="task-templates-api"
 ```bash
 # CRUD
 curl -u pk:sk http://localhost:3000/api/public/task-templates
-# 실행
+# 실행 (v1: chat/general, v2: sequential/multiple)
 curl -u pk:sk -X POST http://localhost:3000/api/public/task-templates/TEMPLATE_ID/execute \
   -H 'Content-Type: application/json' -d '{"inputs": {"topic": "AI"}}'
+# 스트리밍 (v2: 구조화된 SSE)
+curl -u pk:sk -X POST http://localhost:3000/api/public/task-templates/TEMPLATE_ID/stream \
+  -H 'Content-Type: application/json' -d '{"inputs": {"topic": "AI"}}' --no-buffer
 ```
 
 ## Claude Code Configuration (.claude/)
