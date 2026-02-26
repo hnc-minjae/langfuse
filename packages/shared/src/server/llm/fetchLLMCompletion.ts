@@ -136,7 +136,10 @@ export async function fetchLLMCompletion(
   } = params;
 
   const { baseURL, config } = llmConnection;
-  const apiKey = decrypt(llmConnection.secretKey); // the apiKey must never be printed to the console
+  const decryptedKey = decrypt(llmConnection.secretKey); // the apiKey must never be printed to the console
+  // OpenAI-compatible servers (vLLM, etc.) may not require auth.
+  // Use a dummy key to prevent the SDK from rejecting an empty string.
+  const apiKey = decryptedKey || "not-needed";
   const extraHeaders = decryptAndParseExtraHeaders(llmConnection.extraHeaders);
 
   let finalCallbacks: BaseCallbackHandler[] | undefined = callbacks ?? [];
